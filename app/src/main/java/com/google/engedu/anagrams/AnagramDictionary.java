@@ -19,6 +19,8 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 
@@ -28,12 +30,20 @@ public class AnagramDictionary {
     private static final int DEFAULT_WORD_LENGTH = 3;
     private static final int MAX_WORD_LENGTH = 7;
     private Random random = new Random();
+    private ArrayList<String> wordList = new ArrayList<>();
+    private HashSet<String> wordSet = new HashSet<>();
+    private HashMap<String, ArrayList<String>> lettersToWord = new HashMap<>();
 
     public AnagramDictionary(Reader reader) throws IOException {
         BufferedReader in = new BufferedReader(reader);
         String line;
         while((line = in.readLine()) != null) {
             String word = line.trim();
+            wordList.add(word);
+            String sorted = sortLetters(word);
+            if (!lettersToWord.containsKey(sorted))
+                lettersToWord.put(sorted, new ArrayList<String>());
+            lettersToWord.get(sorted).add(word);
         }
     }
 
@@ -42,8 +52,33 @@ public class AnagramDictionary {
     }
 
     public List<String> getAnagrams(String targetWord) {
-        ArrayList<String> result = new ArrayList<String>();
+        ArrayList<String> result = new ArrayList<>();
+
+        String sorted = sortLetters(targetWord);
+        for (String s : wordList) {
+            if (targetWord.equals(s) || sorted.equals(sortLetters(s)))
+                result.add(s);
+        }
+
         return result;
+    }
+
+    private String sortLetters(String word) {
+        StringBuilder sb = new StringBuilder(word);
+        for (int i = 0; i < sb.length(); i++) {
+            char min = sb.charAt(i);
+            int indexMin = i;
+            for (int j = i + 1; j < sb.length(); j++) {
+                char c = sb.charAt(j);
+                if (c < min) {
+                    min = c;
+                    indexMin = j;
+                }
+            }
+            sb.setCharAt(indexMin, word.charAt(i));
+            sb.setCharAt(i, min);
+        }
+        return sb.toString();
     }
 
     public List<String> getAnagramsWithOneMoreLetter(String word) {
