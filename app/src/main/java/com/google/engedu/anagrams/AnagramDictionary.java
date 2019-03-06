@@ -37,9 +37,10 @@ public class AnagramDictionary {
     public AnagramDictionary(Reader reader) throws IOException {
         BufferedReader in = new BufferedReader(reader);
         String line;
-        while((line = in.readLine()) != null) {
+        while ((line = in.readLine()) != null) {
             String word = line.trim();
             wordList.add(word);
+            wordSet.add(word);
             String sorted = sortLetters(word);
             if (!lettersToWord.containsKey(sorted))
                 lettersToWord.put(sorted, new ArrayList<String>());
@@ -48,24 +49,17 @@ public class AnagramDictionary {
     }
 
     public boolean isGoodWord(String word, String base) {
-        return true;
+        return !word.contains(base) && wordSet.contains(word);
     }
 
     public List<String> getAnagrams(String targetWord) {
-        ArrayList<String> result = new ArrayList<>();
-
         String sorted = sortLetters(targetWord);
-        for (String s : wordList) {
-            if (targetWord.equals(s) || sorted.equals(sortLetters(s)))
-                result.add(s);
-        }
-
-        return result;
+        return lettersToWord.get(sorted);
     }
 
     private String sortLetters(String word) {
         StringBuilder sb = new StringBuilder(word);
-        for (int i = 0; i < sb.length(); i++) {
+        for (int i = 0; i < sb.length() - 1; i++) {
             char min = sb.charAt(i);
             int indexMin = i;
             for (int j = i + 1; j < sb.length(); j++) {
@@ -75,18 +69,41 @@ public class AnagramDictionary {
                     indexMin = j;
                 }
             }
-            sb.setCharAt(indexMin, word.charAt(i));
+            char old = sb.charAt(i);
+            sb.setCharAt(indexMin, old);
             sb.setCharAt(i, min);
         }
         return sb.toString();
     }
 
     public List<String> getAnagramsWithOneMoreLetter(String word) {
-        ArrayList<String> result = new ArrayList<String>();
+        ArrayList<String> result = new ArrayList<>();
+
+        for (char c = 'a'; c <= 'z'; c++) {
+            List<String> anagrams = getAnagrams(word + c);
+            if (anagrams != null)
+                result.addAll(anagrams);
+        }
+
         return result;
     }
 
-    public String pickGoodStarterWord() {
-        return "stop";
+    public String pickGoodStarterWord() throws RuntimeException {
+        int rand = random.nextInt(wordList.size());
+
+        for (int i = rand + 1; i < wordList.size(); i++) {
+            String word = wordList.get(i);
+            if (getAnagrams(word).size() > MIN_NUM_ANAGRAMS)
+                return word;
+
+            if (i == rand)
+                throw new RuntimeException("No good starter word found, please check the dictionary and the minimum number of anagrams set.");
+
+            // Wrap around
+            if (i == wordList.size() - 1)
+                i = -1;
+        }
+
+        return "";
     }
 }
