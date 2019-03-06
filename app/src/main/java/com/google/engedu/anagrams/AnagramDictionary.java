@@ -30,21 +30,28 @@ public class AnagramDictionary {
     private static final int DEFAULT_WORD_LENGTH = 3;
     private static final int MAX_WORD_LENGTH = 7;
     private Random random = new Random();
-    private ArrayList<String> wordList = new ArrayList<>();
     private HashSet<String> wordSet = new HashSet<>();
     private HashMap<String, ArrayList<String>> lettersToWord = new HashMap<>();
+    private HashMap<Integer, ArrayList<String>> sizeToWords = new HashMap<>();
+    private int wordLength = DEFAULT_WORD_LENGTH;
+    private HashSet<String> usedWords = new HashSet<>();
 
     public AnagramDictionary(Reader reader) throws IOException {
         BufferedReader in = new BufferedReader(reader);
         String line;
         while ((line = in.readLine()) != null) {
             String word = line.trim();
-            wordList.add(word);
             wordSet.add(word);
+
             String sorted = sortLetters(word);
             if (!lettersToWord.containsKey(sorted))
                 lettersToWord.put(sorted, new ArrayList<String>());
             lettersToWord.get(sorted).add(word);
+
+            int len = word.length();
+            if (!sizeToWords.containsKey(len))
+                sizeToWords.put(len, new ArrayList<String>());
+            sizeToWords.get(len).add(word);
         }
     }
 
@@ -88,22 +95,45 @@ public class AnagramDictionary {
         return result;
     }
 
-    public String pickGoodStarterWord() throws RuntimeException {
-        int rand = random.nextInt(wordList.size());
+    public void increaseDifficulty() {
+        wordLength++;
+    }
 
-        for (int i = rand + 1; i < wordList.size(); i++) {
-            String word = wordList.get(i);
-            if (getAnagrams(word).size() > MIN_NUM_ANAGRAMS)
+    public void decreaseDifficulty() {
+        wordLength--;
+    }
+
+    public HashSet<String> getUsedWords() {
+        return usedWords;
+    }
+
+    public String pickGoodStarterWord() throws Exception {
+        ArrayList<String> words = sizeToWords.get(wordLength);
+        if (words == null)
+            throw new Exception("No good starter word found, please check the dictionary and the min/max word length.");
+
+        int rand = random.nextInt(words.size() - 1);
+
+        for (int i = rand + 1; i < words.size(); i++) {
+            String word = words.get(i);
+            if (!usedWords.contains(word) && getAnagramsWithOneMoreLetter(word).size() > MIN_NUM_ANAGRAMS) {
+                usedWords.add(word);
                 return word;
+            }
 
-            if (i == rand)
-                throw new RuntimeException("No good starter word found, please check the dictionary and the minimum number of anagrams set.");
+            if (i == rand) {
+                if (wordLength < MAX_WORD_LENGTH) {
+                    wordLength++;
+                    return pickGoodStarterWord();  // look for a longer word
+                }
+                throw new Exception("No good starter word found, please check the dictionary and the minimum number of anagrams set.");
+            }
 
             // Wrap around
-            if (i == wordList.size() - 1)
+            if (i == words.size() - 1)
                 i = -1;
         }
 
-        return "";
+        throw new Exception("No good starter word found, please check the dictionary.");
     }
 }

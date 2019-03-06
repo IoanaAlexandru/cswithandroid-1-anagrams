@@ -16,9 +16,11 @@
 package com.google.engedu.anagrams;
 
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.res.AssetManager;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.text.Html;
@@ -77,6 +79,8 @@ public class AnagramsActivity extends AppCompatActivity {
                 return handled;
             }
         });
+
+
     }
 
     private void processWord(EditText editText) {
@@ -121,28 +125,21 @@ public class AnagramsActivity extends AppCompatActivity {
     }
 
     public boolean defaultAction(View view) {
-        TextView gameStatus = (TextView) findViewById(R.id.gameStatusView);
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        EditText editText = (EditText) findViewById(R.id.editText);
-        TextView resultView = (TextView) findViewById(R.id.resultView);
+        final TextView gameStatus = (TextView) findViewById(R.id.gameStatusView);
+        final FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+        final EditText editText = (EditText) findViewById(R.id.editText);
+        final TextView resultView = (TextView) findViewById(R.id.resultView);
+
         if (currentWord == null) {
-            try {
-                currentWord = dictionary.pickGoodStarterWord();
-            } catch (RuntimeException e) {
-                Toast toast = Toast.makeText(this, "Could not find a good starter word", Toast.LENGTH_LONG);
-                toast.show();
-                return false;
-            }
-            anagrams = dictionary.getAnagramsWithOneMoreLetter(currentWord);
-            gameStatus.setText(Html.fromHtml(String.format(START_MESSAGE, currentWord.toUpperCase(), currentWord)));
-            fab.setImageResource(android.R.drawable.ic_menu_help);
-            fab.hide();
-            resultView.setText("");
-            editText.setText("");
-            editText.setEnabled(true);
-            editText.requestFocus();
-            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-            imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT);
+            if (dictionary.getUsedWords().size() > 0)
+                getDifficultyDialog(gameStatus, fab, editText, resultView).show();
+            else
+                try {
+                    startNewGame(gameStatus, fab, editText, resultView);
+                } catch (Exception e) {
+                    Toast toast = Toast.makeText(AnagramsActivity.this, "Could not find a good starter word", Toast.LENGTH_LONG);
+                    toast.show();
+                }
         } else {
             editText.setText(currentWord);
             editText.setEnabled(false);
@@ -152,5 +149,52 @@ public class AnagramsActivity extends AppCompatActivity {
             gameStatus.append(" Hit 'Play' to start again");
         }
         return true;
+    }
+
+    private AlertDialog.Builder getDifficultyDialog(final TextView gameStatus, final FloatingActionButton fab, final EditText editText, final TextView resultView) {
+        DialogInterface.OnClickListener dialogClickListener = new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                try {
+                    switch (which) {
+                        case DialogInterface.BUTTON_POSITIVE:
+                            //Yes button clicked
+                            dictionary.increaseDifficulty();
+                            startNewGame(gameStatus, fab, editText, resultView);
+                            break;
+
+                        case DialogInterface.BUTTON_NEGATIVE:
+                            //No button clicked
+                            startNewGame(gameStatus, fab, editText, resultView);
+                            break;
+                    }
+                } catch (Exception e) {
+                    dictionary.decreaseDifficulty();
+                    Toast toast = Toast.makeText(AnagramsActivity.this, "Could not find a good starter word", Toast.LENGTH_LONG);
+                    toast.show();
+                }
+            }
+        };
+
+        AlertDialog.Builder difficultyDialog = new AlertDialog.Builder(this);
+        difficultyDialog.setMessage("Increase difficulty?").setPositiveButton("Yes", dialogClickListener)
+                .setNegativeButton("No", dialogClickListener);
+        return difficultyDialog;
+    }
+
+    private void startNewGame(TextView gameStatus, FloatingActionButton fab, EditText editText, TextView resultView) throws Exception {
+        currentWord = dictionary.pickGoodStarterWord();
+        if (currentWord == null)
+            throw new Exception("Starter word null");
+        anagrams = dictionary.getAnagramsWithOneMoreLetter(currentWord);
+        gameStatus.setText(Html.fromHtml(String.format(START_MESSAGE, currentWord.toUpperCase(), currentWord)));
+        fab.setImageResource(android.R.drawable.ic_menu_help);
+        fab.hide();
+        resultView.setText("");
+        editText.setText("");
+        editText.setEnabled(true);
+        editText.requestFocus();
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT);
     }
 }
