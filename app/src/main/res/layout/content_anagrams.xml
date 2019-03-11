@@ -25,6 +25,15 @@
     tools:context=".AnagramsActivity"
     tools:showIn="@layout/activity_anagrams">
 
+    <ProgressBar
+        android:id="@+id/pBar"
+        style="?android:attr/progressBarStyleLarge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_centerVertical="true">
+    </ProgressBar>
+
     <TextView
         android:id="@+id/gameStatusView"
         android:layout_width="wrap_content"

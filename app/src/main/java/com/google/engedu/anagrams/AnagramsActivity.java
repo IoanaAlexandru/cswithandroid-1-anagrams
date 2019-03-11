@@ -33,6 +33,7 @@ import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -50,36 +51,46 @@ public class AnagramsActivity extends AppCompatActivity {
     private String currentWord;
     private List<String> anagrams;
     private int score = 0;
+    private Thread dictionaryLoadingThread;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.activity_anagrams);
+
+        ProgressBar pgsBar = (ProgressBar)findViewById(R.id.pBar);
+        pgsBar.setVisibility(View.VISIBLE);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        AssetManager assetManager = getAssets();
-        try {
-            InputStream inputStream = assetManager.open("words.txt");
-            dictionary = new AnagramDictionary(new InputStreamReader(inputStream));
-        } catch (IOException e) {
-            Toast toast = Toast.makeText(this, "Could not load dictionary", Toast.LENGTH_LONG);
-            toast.show();
-        }
+
+        Runnable runnable = () -> {
+            AssetManager assetManager = getAssets();
+            try {
+                InputStream inputStream = assetManager.open("words.txt");
+                dictionary = new AnagramDictionary(new InputStreamReader(inputStream));
+            } catch (IOException e) {
+                Toast toast = Toast.makeText(AnagramsActivity.this, "Could not load dictionary", Toast.LENGTH_LONG);
+                toast.show();
+            }
+            pgsBar.setVisibility(View.INVISIBLE);
+        };
+        dictionaryLoadingThread = new Thread(runnable);
+        dictionaryLoadingThread.start();
+
         // Set up the EditText box to process the content of the box when the user hits 'enter'
         final EditText editText = (EditText) findViewById(R.id.editText);
+        editText.setEnabled(false);
         editText.setRawInputType(InputType.TYPE_CLASS_TEXT);
         editText.setImeOptions(EditorInfo.IME_ACTION_GO);
-        editText.setOnEditorActionListener(new TextView.OnEditorActionListener() {
-            @Override
-            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
-                boolean handled = false;
-                if (actionId == EditorInfo.IME_ACTION_GO || (
-                        actionId == EditorInfo.IME_NULL && event != null && event.getAction() == KeyEvent.ACTION_DOWN)) {
-                    processWord(editText);
-                    handled = true;
-                }
-                return handled;
+        editText.setOnEditorActionListener((v, actionId, event) -> {
+            boolean handled = false;
+            if (actionId == EditorInfo.IME_ACTION_GO || (
+                    actionId == EditorInfo.IME_NULL && event != null && event.getAction() == KeyEvent.ACTION_DOWN)) {
+                processWord(editText);
+                handled = true;
             }
+            return handled;
         });
         changeScoreTo(0);
     }
@@ -147,6 +158,7 @@ public class AnagramsActivity extends AppCompatActivity {
 
             gameStatus.setText(R.string.initial_message);
             fab.setImageResource(android.R.drawable.ic_media_play);
+            fab.show();
             editText.setText("");
             editText.setEnabled(false);
             resultView.setText("");
@@ -162,6 +174,12 @@ public class AnagramsActivity extends AppCompatActivity {
     }
 
     public void defaultAction(View view) {
+        if (dictionaryLoadingThread.isAlive()) {
+            Toast toast = Toast.makeText(AnagramsActivity.this, "Dictionary still loading", Toast.LENGTH_LONG);
+            toast.show();
+            return;
+        }
+
         if (currentWord == null) {
             if (dictionary.getUsedWords().size() > 0)
                 getDifficultyDialog().show();
@@ -178,27 +196,24 @@ public class AnagramsActivity extends AppCompatActivity {
     }
 
     private AlertDialog.Builder getDifficultyDialog() {
-        DialogInterface.OnClickListener dialogClickListener = new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                try {
-                    switch (which) {
-                        case DialogInterface.BUTTON_POSITIVE:
-                            //Yes button clicked
-                            dictionary.increaseDifficulty();
-                            startNewGame();
-                            break;
+        DialogInterface.OnClickListener dialogClickListener = (dialog, which) -> {
+            try {
+                switch (which) {
+                    case DialogInterface.BUTTON_POSITIVE:
+                        //Yes button clicked
+                        dictionary.increaseDifficulty();
+                        startNewGame();
+                        break;
 
-                        case DialogInterface.BUTTON_NEGATIVE:
-                            //No button clicked
-                            startNewGame();
-                            break;
-                    }
-                } catch (Exception e) {
-                    dictionary.decreaseDifficulty();
-                    Toast toast = Toast.makeText(AnagramsActivity.this, "Could not find a good starter word", Toast.LENGTH_LONG);
-                    toast.show();
+                    case DialogInterface.BUTTON_NEGATIVE:
+                        //No button clicked
+                        startNewGame();
+                        break;
                 }
+            } catch (Exception e) {
+                dictionary.decreaseDifficulty();
+                Toast toast = Toast.makeText(AnagramsActivity.this, "Could not find a good starter word", Toast.LENGTH_LONG);
+                toast.show();
             }
         };
 
