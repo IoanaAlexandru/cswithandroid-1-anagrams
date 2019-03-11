@@ -50,7 +50,7 @@ public class AnagramsActivity extends AppCompatActivity {
     private AnagramDictionary dictionary;
     private String currentWord;
     private List<String> anagrams;
-    private int score = 0;
+    private int score;
     private Thread dictionaryLoadingThread;
 
     @Override
@@ -59,12 +59,15 @@ public class AnagramsActivity extends AppCompatActivity {
 
         setContentView(R.layout.activity_anagrams);
 
-        ProgressBar pgsBar = (ProgressBar)findViewById(R.id.pBar);
-        pgsBar.setVisibility(View.VISIBLE);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        Runnable runnable = () -> {
+        // Load dictionary in a different thread because it takes a while
+        // Show progress bar until it finishes loading
+        ProgressBar pgsBar = findViewById(R.id.pBar);
+        pgsBar.setVisibility(View.VISIBLE);
+
+        dictionaryLoadingThread = new Thread(() -> {
             AssetManager assetManager = getAssets();
             try {
                 InputStream inputStream = assetManager.open("words.txt");
@@ -74,12 +77,11 @@ public class AnagramsActivity extends AppCompatActivity {
                 toast.show();
             }
             pgsBar.setVisibility(View.INVISIBLE);
-        };
-        dictionaryLoadingThread = new Thread(runnable);
+        });
         dictionaryLoadingThread.start();
 
         // Set up the EditText box to process the content of the box when the user hits 'enter'
-        final EditText editText = (EditText) findViewById(R.id.editText);
+        final EditText editText = findViewById(R.id.editText);
         editText.setEnabled(false);
         editText.setRawInputType(InputType.TYPE_CLASS_TEXT);
         editText.setImeOptions(EditorInfo.IME_ACTION_GO);
@@ -92,26 +94,28 @@ public class AnagramsActivity extends AppCompatActivity {
             }
             return handled;
         });
+
         changeScoreTo(0);
     }
 
+    // Update score and refresh view
     private void changeScoreTo(int newScore) {
-        final TextView scoreView = (TextView) findViewById(R.id.scoreView);
         score = newScore;
+
+        final TextView scoreView = findViewById(R.id.scoreView);
         scoreView.setText(R.string.score);
         scoreView.append(String.format(Locale.getDefault(), "%d", score));
     }
 
+    // Refresh view of remaining anagrams to find for current word
     private void refreshRemaining() {
-        final TextView remainingView = (TextView) findViewById(R.id.remainingView);
-
+        final TextView remainingView = findViewById(R.id.remainingView);
         remainingView.setText(R.string.remaining);
         remainingView.append(String.format(Locale.getDefault(), "%d", anagrams.size()));
     }
 
+    // Process entered word and list it
     private void processWord(EditText editText) {
-        TextView resultView = (TextView) findViewById(R.id.resultView);
-
         String word = editText.getText().toString().trim().toLowerCase();
         if (word.length() == 0) {
             return;
@@ -126,11 +130,12 @@ public class AnagramsActivity extends AppCompatActivity {
             word = "X " + word;
         }
 
-        resultView.append(Html.fromHtml(String.format("<font color=%s>%s</font><BR>", color, word)));
+        TextView resultView = findViewById(R.id.resultView);
+        resultView.append(Html.fromHtml(String.format("<font color=%s>%s</font><BR>", color, word), Html.FROM_HTML_MODE_LEGACY));
 
         editText.setText("");
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+        FloatingActionButton fab = findViewById(R.id.fab);
         fab.show();
     }
 
@@ -148,20 +153,22 @@ public class AnagramsActivity extends AppCompatActivity {
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
 
-        //noinspection SimplifiableIfStatement
         if (id == R.id.action_restart) {
-            final TextView gameStatus = (TextView) findViewById(R.id.gameStatusView);
-            final FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-            final EditText editText = (EditText) findViewById(R.id.editText);
-            final TextView resultView = (TextView) findViewById(R.id.resultView);
-            final TextView remainingView = (TextView) findViewById(R.id.remainingView);
-
+            final TextView gameStatus = findViewById(R.id.gameStatusView);
             gameStatus.setText(R.string.initial_message);
+
+            final FloatingActionButton fab = findViewById(R.id.fab);
             fab.setImageResource(android.R.drawable.ic_media_play);
             fab.show();
+
+            final EditText editText = findViewById(R.id.editText);
             editText.setText("");
             editText.setEnabled(false);
+
+            final TextView resultView = findViewById(R.id.resultView);
             resultView.setText("");
+
+            final TextView remainingView = findViewById(R.id.remainingView);
             remainingView.setText("");
 
             changeScoreTo(0);
@@ -233,23 +240,22 @@ public class AnagramsActivity extends AppCompatActivity {
     }
 
     private void startNewGame() throws Exception {
-        final TextView gameStatus = (TextView) findViewById(R.id.gameStatusView);
-        final FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        final EditText editText = (EditText) findViewById(R.id.editText);
-        final TextView resultView = (TextView) findViewById(R.id.resultView);
-
         currentWord = dictionary.pickGoodStarterWord();
         if (currentWord == null)
             throw new Exception("Starter word null");
         anagrams = dictionary.getAnagramsWithOneMoreLetter(currentWord);
 
-        gameStatus.setText(Html.fromHtml(String.format(START_MESSAGE, currentWord.toUpperCase(), currentWord)));
+        final TextView gameStatus = findViewById(R.id.gameStatusView);
+        gameStatus.setText(Html.fromHtml(String.format(START_MESSAGE, currentWord.toUpperCase(), currentWord), Html.FROM_HTML_MODE_LEGACY));
 
+        final FloatingActionButton fab = findViewById(R.id.fab);
         fab.setImageResource(android.R.drawable.ic_menu_help);
         fab.hide();
 
+        final TextView resultView = findViewById(R.id.resultView);
         resultView.setText("");
 
+        final EditText editText = findViewById(R.id.editText);
         editText.setText("");
         editText.setEnabled(true);
         editText.requestFocus();
@@ -261,21 +267,20 @@ public class AnagramsActivity extends AppCompatActivity {
     }
 
     private void showRemainingWords() {
-        final TextView gameStatus = (TextView) findViewById(R.id.gameStatusView);
-        final FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        final EditText editText = (EditText) findViewById(R.id.editText);
-        final TextView resultView = (TextView) findViewById(R.id.resultView);
-
+        final EditText editText = findViewById(R.id.editText);
         editText.setText(currentWord);
         editText.setEnabled(false);
 
+        final FloatingActionButton fab = findViewById(R.id.fab);
         fab.setImageResource(android.R.drawable.ic_media_play);
 
-        currentWord = null;
-
+        final TextView resultView = findViewById(R.id.resultView);
         resultView.append(TextUtils.join("\n", anagrams));
 
+        final TextView gameStatus = findViewById(R.id.gameStatusView);
         gameStatus.append(" Hit 'Play' to start again");
+
+        currentWord = null;
 
         int scoreDecrease = anagrams.stream()
                 .mapToInt(String::length).sum();

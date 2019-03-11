@@ -15,6 +15,8 @@
 
 package com.google.engedu.anagrams;
 
+import android.util.SparseArray;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Reader;
@@ -33,11 +35,11 @@ public class AnagramDictionary {
     private Random random = new Random();
     private HashSet<String> wordSet = new HashSet<>();
     private HashMap<String, ArrayList<String>> lettersToWord = new HashMap<>();
-    private HashMap<Integer, ArrayList<String>> sizeToStarterWords = new HashMap<>();
+    private SparseArray<ArrayList<String>> sizeToStarterWords = new SparseArray<>();
     private int wordLength = DEFAULT_WORD_LENGTH;
     private HashSet<String> usedWords = new HashSet<>();
 
-    public AnagramDictionary(Reader reader) throws IOException {
+    AnagramDictionary(Reader reader) throws IOException {
         BufferedReader in = new BufferedReader(reader);
         String line;
         while ((line = in.readLine()) != null) {
@@ -46,23 +48,23 @@ public class AnagramDictionary {
 
             String sorted = sortLetters(word);
             if (!lettersToWord.containsKey(sorted))
-                lettersToWord.put(sorted, new ArrayList<String>());
+                lettersToWord.put(sorted, new ArrayList<>());
             lettersToWord.get(sorted).add(word);
 
             int len = word.length();
             if (getAnagramsWithOneMoreLetter(word).size() > MIN_NUM_ANAGRAMS) {
-                if (!sizeToStarterWords.containsKey(len))
-                    sizeToStarterWords.put(len, new ArrayList<String>());
+                if (sizeToStarterWords.get(len, null) == null)
+                    sizeToStarterWords.put(len, new ArrayList<>());
                 sizeToStarterWords.get(len).add(word);
             }
         }
     }
 
-    public boolean isGoodWord(String word, String base) {
+    boolean isGoodWord(String word, String base) {
         return !word.contains(base) && wordSet.contains(word);
     }
 
-    public List<String> getAnagrams(String targetWord) {
+    private List<String> getAnagrams(String targetWord) {
         String sorted = sortLetters(targetWord);
         return lettersToWord.get(sorted);
     }
@@ -86,7 +88,7 @@ public class AnagramDictionary {
         return sb.toString();
     }
 
-    public List<String> getAnagramsWithOneMoreLetter(String word) {
+    List<String> getAnagramsWithOneMoreLetter(String word) {
         ArrayList<String> result = new ArrayList<>();
 
         for (char c = 'a'; c <= 'z'; c++) {
@@ -100,11 +102,11 @@ public class AnagramDictionary {
         return result;
     }
 
-    public void increaseDifficulty() {
+    void increaseDifficulty() {
         wordLength++;
     }
 
-    public void decreaseDifficulty() {
+    void decreaseDifficulty() {
         wordLength--;
     }
 
@@ -113,11 +115,11 @@ public class AnagramDictionary {
         wordLength = DEFAULT_WORD_LENGTH;
     }
 
-    public HashSet<String> getUsedWords() {
+    HashSet<String> getUsedWords() {
         return usedWords;
     }
 
-    public String pickGoodStarterWord() throws Exception {
+    String pickGoodStarterWord() throws Exception {
         ArrayList<String> words = sizeToStarterWords.get(wordLength);
         if (words == null)
             throw new Exception("No good starter word found, please check the dictionary and the min/max word length.");
