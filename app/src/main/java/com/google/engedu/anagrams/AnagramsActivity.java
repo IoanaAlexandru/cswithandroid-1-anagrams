@@ -154,6 +154,12 @@ public class AnagramsActivity extends AppCompatActivity {
         int id = item.getItemId();
 
         if (id == R.id.action_restart) {
+            if (dictionaryLoadingThread.isAlive()) {
+                Toast toast = Toast.makeText(AnagramsActivity.this, "Dictionary still loading, please wait", Toast.LENGTH_LONG);
+                toast.show();
+                return true;
+            }
+
             final TextView gameStatus = findViewById(R.id.gameStatusView);
             gameStatus.setText(R.string.initial_message);
 
