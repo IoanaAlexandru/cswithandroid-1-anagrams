@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 public class AnagramDictionary {
 
@@ -91,7 +92,9 @@ public class AnagramDictionary {
         for (char c = 'a'; c <= 'z'; c++) {
             List<String> anagrams = getAnagrams(word + c);
             if (anagrams != null)
-                result.addAll(anagrams);
+                result.addAll(anagrams.stream()
+                        .filter(w -> !w.contains(word))
+                        .collect(Collectors.toList()));
         }
 
         return result;
@@ -104,6 +107,8 @@ public class AnagramDictionary {
     public void decreaseDifficulty() {
         wordLength--;
     }
+
+    public void resetDifficulty() { wordLength = DEFAULT_WORD_LENGTH; }
 
     public HashSet<String> getUsedWords() {
         return usedWords;

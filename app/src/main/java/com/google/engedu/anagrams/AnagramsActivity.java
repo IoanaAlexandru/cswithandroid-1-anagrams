@@ -40,6 +40,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.List;
+import java.util.Locale;
+import java.util.stream.Collector;
 
 
 public class AnagramsActivity extends AppCompatActivity {
@@ -80,12 +82,26 @@ public class AnagramsActivity extends AppCompatActivity {
                 return handled;
             }
         });
+        changeScoreTo(0);
+    }
 
+    private void changeScoreTo(int newScore) {
+        final TextView scoreView = (TextView) findViewById(R.id.scoreView);
+        score = newScore;
+        scoreView.setText(R.string.score);
+        scoreView.append(String.format(Locale.getDefault(), "%d", score));
+    }
 
+    private void refreshRemaining() {
+        final TextView remainingView = (TextView) findViewById(R.id.remainingView);
+
+        remainingView.setText(R.string.remaining);
+        remainingView.append(String.format(Locale.getDefault(), "%d", anagrams.size()));
     }
 
     private void processWord(EditText editText) {
         TextView resultView = (TextView) findViewById(R.id.resultView);
+
         String word = editText.getText().toString().trim().toLowerCase();
         if (word.length() == 0) {
             return;
@@ -94,11 +110,16 @@ public class AnagramsActivity extends AppCompatActivity {
         if (dictionary.isGoodWord(word, currentWord) && anagrams.contains(word)) {
             anagrams.remove(word);
             color = "#00aa29";
+            changeScoreTo(score + word.length());
+            refreshRemaining();
         } else {
             word = "X " + word;
         }
+
         resultView.append(Html.fromHtml(String.format("<font color=%s>%s</font><BR>", color, word)));
+
         editText.setText("");
+
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.show();
     }
@@ -125,34 +146,23 @@ public class AnagramsActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    public boolean defaultAction(View view) {
-        final TextView gameStatus = (TextView) findViewById(R.id.gameStatusView);
-        final FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        final EditText editText = (EditText) findViewById(R.id.editText);
-        final TextView resultView = (TextView) findViewById(R.id.resultView);
-
+    public void defaultAction(View view) {
         if (currentWord == null) {
             if (dictionary.getUsedWords().size() > 0)
-                getDifficultyDialog(gameStatus, fab, editText, resultView).show();
+                getDifficultyDialog().show();
             else
                 try {
-                    startNewGame(gameStatus, fab, editText, resultView);
+                    startNewGame();
                 } catch (Exception e) {
                     Toast toast = Toast.makeText(AnagramsActivity.this, "Could not find a good starter word", Toast.LENGTH_LONG);
                     toast.show();
                 }
         } else {
-            editText.setText(currentWord);
-            editText.setEnabled(false);
-            fab.setImageResource(android.R.drawable.ic_media_play);
-            currentWord = null;
-            resultView.append(TextUtils.join("\n", anagrams));
-            gameStatus.append(" Hit 'Play' to start again");
+            getGiveUpConfirmationDialog().show();
         }
-        return true;
     }
 
-    private AlertDialog.Builder getDifficultyDialog(final TextView gameStatus, final FloatingActionButton fab, final EditText editText, final TextView resultView) {
+    private AlertDialog.Builder getDifficultyDialog() {
         DialogInterface.OnClickListener dialogClickListener = new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
@@ -161,12 +171,12 @@ public class AnagramsActivity extends AppCompatActivity {
                         case DialogInterface.BUTTON_POSITIVE:
                             //Yes button clicked
                             dictionary.increaseDifficulty();
-                            startNewGame(gameStatus, fab, editText, resultView);
+                            startNewGame();
                             break;
 
                         case DialogInterface.BUTTON_NEGATIVE:
                             //No button clicked
-                            startNewGame(gameStatus, fab, editText, resultView);
+                            startNewGame();
                             break;
                     }
                 } catch (Exception e) {
@@ -183,19 +193,62 @@ public class AnagramsActivity extends AppCompatActivity {
         return difficultyDialog;
     }
 
-    private void startNewGame(TextView gameStatus, FloatingActionButton fab, EditText editText, TextView resultView) throws Exception {
+    private AlertDialog.Builder getGiveUpConfirmationDialog() {
+        AlertDialog.Builder confirmationDialog = new AlertDialog.Builder(this);
+        confirmationDialog.setMessage("Are you sure you want to give up trying to find anagrams for " +
+                "this word?\n\nYou will lose points for the words you haven't found.")
+                .setPositiveButton("Yes", ((DialogInterface dialog, int which) -> showRemainingWords()))
+                .setNegativeButton("No", null);
+        return confirmationDialog;
+    }
+
+    private void startNewGame() throws Exception {
+        final TextView gameStatus = (TextView) findViewById(R.id.gameStatusView);
+        final FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+        final EditText editText = (EditText) findViewById(R.id.editText);
+        final TextView resultView = (TextView) findViewById(R.id.resultView);
+
         currentWord = dictionary.pickGoodStarterWord();
         if (currentWord == null)
             throw new Exception("Starter word null");
         anagrams = dictionary.getAnagramsWithOneMoreLetter(currentWord);
+
         gameStatus.setText(Html.fromHtml(String.format(START_MESSAGE, currentWord.toUpperCase(), currentWord)));
+
         fab.setImageResource(android.R.drawable.ic_menu_help);
         fab.hide();
+
         resultView.setText("");
+
         editText.setText("");
         editText.setEnabled(true);
         editText.requestFocus();
+
+        refreshRemaining();
+
         InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT);
+    }
+
+    private void showRemainingWords() {
+        final TextView gameStatus = (TextView) findViewById(R.id.gameStatusView);
+        final FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+        final EditText editText = (EditText) findViewById(R.id.editText);
+        final TextView resultView = (TextView) findViewById(R.id.resultView);
+
+        editText.setText(currentWord);
+        editText.setEnabled(false);
+
+        fab.setImageResource(android.R.drawable.ic_media_play);
+
+        currentWord = null;
+
+        resultView.append(TextUtils.join("\n", anagrams));
+
+        gameStatus.append(" Hit 'Play' to start again");
+
+        int scoreDecrease = anagrams.stream()
+                .mapToInt(String::length).sum();
+        changeScoreTo(score - scoreDecrease);
     }
 }
