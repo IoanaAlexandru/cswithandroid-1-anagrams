@@ -32,7 +32,7 @@ public class AnagramDictionary {
     private Random random = new Random();
     private HashSet<String> wordSet = new HashSet<>();
     private HashMap<String, ArrayList<String>> lettersToWord = new HashMap<>();
-    private HashMap<Integer, ArrayList<String>> sizeToWords = new HashMap<>();
+    private HashMap<Integer, ArrayList<String>> sizeToStarterWords = new HashMap<>();
     private int wordLength = DEFAULT_WORD_LENGTH;
     private HashSet<String> usedWords = new HashSet<>();
 
@@ -49,9 +49,11 @@ public class AnagramDictionary {
             lettersToWord.get(sorted).add(word);
 
             int len = word.length();
-            if (!sizeToWords.containsKey(len))
-                sizeToWords.put(len, new ArrayList<String>());
-            sizeToWords.get(len).add(word);
+            if (getAnagramsWithOneMoreLetter(word).size() > MIN_NUM_ANAGRAMS) {
+                if (!sizeToStarterWords.containsKey(len))
+                    sizeToStarterWords.put(len, new ArrayList<String>());
+                sizeToStarterWords.get(len).add(word);
+            }
         }
     }
 
@@ -108,7 +110,7 @@ public class AnagramDictionary {
     }
 
     public String pickGoodStarterWord() throws Exception {
-        ArrayList<String> words = sizeToWords.get(wordLength);
+        ArrayList<String> words = sizeToStarterWords.get(wordLength);
         if (words == null)
             throw new Exception("No good starter word found, please check the dictionary and the min/max word length.");
 
@@ -116,7 +118,7 @@ public class AnagramDictionary {
 
         for (int i = rand + 1; i < words.size(); i++) {
             String word = words.get(i);
-            if (!usedWords.contains(word) && getAnagramsWithOneMoreLetter(word).size() > MIN_NUM_ANAGRAMS) {
+            if (!usedWords.contains(word)) {
                 usedWords.add(word);
                 return word;
             }

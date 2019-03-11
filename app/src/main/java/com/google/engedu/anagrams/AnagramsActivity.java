@@ -48,6 +48,7 @@ public class AnagramsActivity extends AppCompatActivity {
     private AnagramDictionary dictionary;
     private String currentWord;
     private List<String> anagrams;
+    private int score = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
