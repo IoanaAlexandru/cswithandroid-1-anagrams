@@ -108,7 +108,10 @@ public class AnagramDictionary {
         wordLength--;
     }
 
-    public void resetDifficulty() { wordLength = DEFAULT_WORD_LENGTH; }
+    public void reset() {
+        usedWords.clear();
+        wordLength = DEFAULT_WORD_LENGTH;
+    }
 
     public HashSet<String> getUsedWords() {
         return usedWords;

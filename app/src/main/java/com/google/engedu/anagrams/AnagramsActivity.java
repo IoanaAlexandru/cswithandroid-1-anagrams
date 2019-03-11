@@ -41,7 +41,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.List;
 import java.util.Locale;
-import java.util.stream.Collector;
 
 
 public class AnagramsActivity extends AppCompatActivity {
@@ -139,7 +138,23 @@ public class AnagramsActivity extends AppCompatActivity {
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
+        if (id == R.id.action_restart) {
+            final TextView gameStatus = (TextView) findViewById(R.id.gameStatusView);
+            final FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+            final EditText editText = (EditText) findViewById(R.id.editText);
+            final TextView resultView = (TextView) findViewById(R.id.resultView);
+            final TextView remainingView = (TextView) findViewById(R.id.remainingView);
+
+            gameStatus.setText(R.string.initial_message);
+            fab.setImageResource(android.R.drawable.ic_media_play);
+            editText.setText("");
+            editText.setEnabled(false);
+            resultView.setText("");
+            remainingView.setText("");
+
+            changeScoreTo(0);
+            dictionary.reset();
+            currentWord = null;
             return true;
         }
 
