@@ -182,7 +182,7 @@ public class AnagramsActivity extends AppCompatActivity {
 
     public void defaultAction(View view) {
         if (dictionaryLoadingThread.isAlive()) {
-            Toast toast = Toast.makeText(AnagramsActivity.this, "Dictionary still loading", Toast.LENGTH_LONG);
+            Toast toast = Toast.makeText(AnagramsActivity.this, "Dictionary still loading, please wait", Toast.LENGTH_LONG);
             toast.show();
             return;
         }
