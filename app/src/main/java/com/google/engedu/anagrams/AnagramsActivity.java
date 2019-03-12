@@ -34,6 +34,7 @@ import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.ProgressBar;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -137,6 +138,9 @@ public class AnagramsActivity extends AppCompatActivity {
 
         FloatingActionButton fab = findViewById(R.id.fab);
         fab.show();
+
+        ScrollView sv = findViewById(R.id.wordsScroll);
+        sv.scrollTo(0, sv.getBottom());
     }
 
     @Override
